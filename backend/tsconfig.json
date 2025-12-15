@@ -9,6 +9,8 @@
     "target": "es2019",
     "lib": ["esnext"],
     "types": ["node"],
+    "typeRoots": ["./node_modules/@types", "../node_modules/@types"],
+
     /* Output Helpers */
     "sourceMap": true,
     "declaration": true,
