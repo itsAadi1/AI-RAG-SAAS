@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    /* Input / Output Layout */
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    /* Module & Environment */
+    "module": "commonjs",
+    "target": "es2019",
+    "lib": ["esnext"],
+    "types": ["node"],
+
+    /* Output Helpers */
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    /* Type Safety */
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+
+    /* Behavior */
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}
