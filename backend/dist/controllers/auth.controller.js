@@ -47,7 +47,12 @@ const loginUser = async (req, res) => {
             return res.status(400).json({ error: 'Email and password are required' });
         }
         const user = await prisma_1.default.user.findUnique({
-            where: { email }
+            where: { email },
+            select: {
+                id: true,
+                email: true,
+                password: true,
+            },
         });
         if (!user) {
             return res.status(401).json({ error: 'Invalid credentials' });
@@ -57,7 +62,7 @@ const loginUser = async (req, res) => {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
         const token = generateToken(user.id);
-        return res.status(201).json({ token });
+        return res.status(200).json({ token });
     }
     catch (err) {
         return res.status(500).json({ error: 'Internal server error' });

@@ -19,5 +19,8 @@ app.use('/documents', documents_routes_1.default);
 app.use("/rag", rag_routes_1.default);
 app.use('/workspaces', workspace_routes_1.default);
 app.use('/auth', auth_routes_1.default);
-app.listen(3000, () => console.log("Server running on port 3000"));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
 //# sourceMappingURL=index.js.map
