@@ -6,7 +6,8 @@
   "scripts": {
     "clean": "powershell -Command \"Get-ChildItem -Path src -Recurse -Include *.js, *.map, *.d.ts | Remove-Item -Force\"",
     "dev": "nodemon --watch src --exec ts-node src/index.ts",
-    "build": "tsc",
+    "build": "prisma generate && tsc",
+    "postinstall": "prisma generate",
     "start": "node dist/index.js"
   },
   "keywords": [],
