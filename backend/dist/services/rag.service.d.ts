@@ -1,7 +1,7 @@
 export declare function processDocumentForRAG(documentId: string, text: string): Promise<{
     message: string;
 }>;
-export declare function answerWithRAG(question: string): Promise<{
+export declare function answerWithRAG(question: string, workspaceId: string): Promise<{
     answer: string | null;
     sources: import("@pinecone-database/pinecone").ScoredPineconeRecord<import("@pinecone-database/pinecone").RecordMetadata>[];
 }>;

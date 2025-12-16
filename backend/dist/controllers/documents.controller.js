@@ -50,10 +50,41 @@ async function parsePDF(buffer) {
     return result;
 }
 const uploadDocument = async (req, res) => {
+    var _a;
     try {
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
         const file = req.file;
         if (!file)
             return res.status(400).json({ error: "No file uploaded" });
+        const { workspaceId } = req.body;
+        // Validate workspace ownership if workspaceId is provided
+        let workspace;
+        if (workspaceId) {
+            workspace = await prisma_1.default.workspace.findFirst({
+                where: {
+                    id: workspaceId,
+                    ownerId: userId,
+                },
+            });
+            if (!workspace) {
+                return res.status(403).json({ error: 'Workspace not found or access denied' });
+            }
+        }
+        else {
+            // Get user's first workspace or create a default one
+            workspace = await prisma_1.default.workspace.findFirst({
+                where: { ownerId: userId },
+                orderBy: { createdAt: 'asc' },
+            });
+            if (!workspace) {
+                workspace = await prisma_1.default.workspace.create({
+                    data: { name: 'My Workspace', ownerId: userId },
+                });
+            }
+        }
         const uploadDir = path_1.default.join(__dirname, '../../uploads');
         fs_1.default.mkdirSync(uploadDir, { recursive: true });
         const uploadPath = path_1.default.join(uploadDir, file.originalname);
@@ -61,18 +92,6 @@ const uploadDocument = async (req, res) => {
         const parsed = await parsePDF(file.buffer);
         // pdf-parse v2 returns TextResult with .text property
         const text = (parsed === null || parsed === void 0 ? void 0 : parsed.text) || "";
-        let workspace = await prisma_1.default.workspace.findFirst();
-        if (!workspace) {
-            let user = await prisma_1.default.user.findFirst();
-            if (!user) {
-                user = await prisma_1.default.user.create({
-                    data: { email: 'default@example.com', name: 'Default User' },
-                });
-            }
-            workspace = await prisma_1.default.workspace.create({
-                data: { name: 'Default Workspace', ownerId: user.id },
-            });
-        }
         const document = await prisma_1.default.document.create({
             data: {
                 title: file.originalname,

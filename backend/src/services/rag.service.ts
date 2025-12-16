@@ -5,6 +5,16 @@ import { chunkText } from "../utils/chunkText";
 import { embedSingleText } from "../utils/embedding";
 import Groq from "groq-sdk";
 export async function processDocumentForRAG(documentId: string, text: string) {
+  // Get document to retrieve workspaceId
+  const document = await prisma.document.findUnique({
+    where: { id: documentId },
+    select: { workspaceId: true },
+  });
+
+  if (!document) {
+    throw new Error(`Document ${documentId} not found`);
+  }
+
   // 1. Split into chunks
   const chunks = chunkText(text);
 
@@ -40,7 +50,7 @@ export async function processDocumentForRAG(documentId: string, text: string) {
       },
     });
 
-    // Store embedding in Pinecone
+    // Store embedding in Pinecone with workspaceId in metadata
     await pineconeIndex.upsert([
       {
         id: savedChunk.id,
@@ -48,6 +58,7 @@ export async function processDocumentForRAG(documentId: string, text: string) {
         metadata: {
           text: chunk,
           documentId,
+          workspaceId: document.workspaceId,
         },
       },
     ]);
@@ -62,24 +73,35 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY!,
 });
 
-export async function answerWithRAG(question: string) {
-
+export async function answerWithRAG(question: string, workspaceId: string) {
   // 1. Embed the question (4096 dims)
   const queryEmbedding = await embedSingleText(question);
   console.log("Question embedding size:", queryEmbedding.length); // Should be 384
 
   // 2. Vector search in Pinecone - retrieve more chunks to ensure diversity across documents
   const results = await pineconeIndex.query({
-    topK: 20, // Increased from 5 to 20 to get chunks from multiple documents
+    topK: 50, // Increased to account for workspace filtering
     vector: queryEmbedding,
     includeMetadata: true
   });
 
-  // 3. Ensure diversity across documents - limit chunks per document
+  // 3. Filter by workspaceId first
+  const workspaceMatches = results.matches.filter(
+    match => match.metadata?.workspaceId === workspaceId
+  );
+
+  if (workspaceMatches.length === 0) {
+    return {
+      answer: "I don't have any documents in this workspace to answer your question. Please upload some documents first.",
+      sources: []
+    };
+  }
+
+  // 4. Ensure diversity across documents - limit chunks per document
   const documentChunkMap = new Map<string, Array<typeof results.matches[0]>>();
   const maxChunksPerDocument = 5; // Maximum chunks per document to ensure diversity
 
-  for (const match of results.matches) {
+  for (const match of workspaceMatches) {
     const documentId = match.metadata?.documentId as string;
     if (documentId) {
       if (!documentChunkMap.has(documentId)) {

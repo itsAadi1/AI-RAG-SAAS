@@ -15,8 +15,42 @@ async function parsePDF(buffer: Buffer) {
 
 export const uploadDocument = async (req: Request, res: Response) => {
   try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     const file = req.file;
     if (!file) return res.status(400).json({ error: "No file uploaded" });
+
+    const { workspaceId } = req.body;
+
+    // Validate workspace ownership if workspaceId is provided
+    let workspace;
+    if (workspaceId) {
+      workspace = await prisma.workspace.findFirst({
+        where: {
+          id: workspaceId,
+          ownerId: userId,
+        },
+      });
+
+      if (!workspace) {
+        return res.status(403).json({ error: 'Workspace not found or access denied' });
+      }
+    } else {
+      // Get user's first workspace or create a default one
+      workspace = await prisma.workspace.findFirst({
+        where: { ownerId: userId },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      if (!workspace) {
+        workspace = await prisma.workspace.create({
+          data: { name: 'My Workspace', ownerId: userId },
+        });
+      }
+    }
 
     const uploadDir = path.join(__dirname, '../../uploads');
     fs.mkdirSync(uploadDir, { recursive: true });
@@ -28,20 +62,6 @@ export const uploadDocument = async (req: Request, res: Response) => {
 
     // pdf-parse v2 returns TextResult with .text property
     const text = parsed?.text || "";
-
-    let workspace = await prisma.workspace.findFirst();
-    if (!workspace) {
-      let user = await prisma.user.findFirst();
-      if (!user) {
-        user = await prisma.user.create({
-          data: { email: 'default@example.com', name: 'Default User' },
-        });
-      }
-
-      workspace = await prisma.workspace.create({
-        data: { name: 'Default Workspace', ownerId: user.id },
-      });
-    }
 
     const document = await prisma.document.create({
       data: {

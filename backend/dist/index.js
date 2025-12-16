@@ -13,7 +13,11 @@ app.use(express_1.default.json());
 // Routes
 const documents_routes_1 = __importDefault(require("./routes/documents.routes"));
 const rag_routes_1 = __importDefault(require("./routes/rag.routes"));
+const workspace_routes_1 = __importDefault(require("./routes/workspace.routes"));
+const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
 app.use('/documents', documents_routes_1.default);
 app.use("/rag", rag_routes_1.default);
+app.use('/workspaces', workspace_routes_1.default);
+app.use('/auth', auth_routes_1.default);
 app.listen(3000, () => console.log("Server running on port 3000"));
 //# sourceMappingURL=index.js.map
