@@ -7,9 +7,18 @@ const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
+const prisma_1 = __importDefault(require("./prisma/prisma"));
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
+// Test database connection
+prisma_1.default.$connect()
+    .then(() => {
+    console.log('✓ Database connection successful');
+})
+    .catch((error) => {
+    console.error('✗ Database connection failed:', error);
+});
 // Routes
 const documents_routes_1 = __importDefault(require("./routes/documents.routes"));
 const rag_routes_1 = __importDefault(require("./routes/rag.routes"));

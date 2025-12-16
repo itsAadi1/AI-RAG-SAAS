@@ -3,10 +3,20 @@ dotenv.config();
 
 import express from 'express';
 import cors from 'cors';
+import prisma from './prisma/prisma';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Test database connection
+prisma.$connect()
+  .then(() => {
+    console.log('✓ Database connection successful');
+  })
+  .catch((error) => {
+    console.error('✗ Database connection failed:', error);
+  });
 
 // Routes
 import documentRoutes from './routes/documents.routes';

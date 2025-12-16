@@ -7,9 +7,12 @@ const hashPassword = async (password: string) => {
 };
 
 const generateToken=(userId:string)=>{
+   if (!process.env.JWT_SECRET) {
+     throw new Error('JWT_SECRET is not configured');
+   }
    return jwt.sign(
     {userId},
-    process.env.JWT_SECRET!,
+    process.env.JWT_SECRET,
     {
         expiresIn:'1d'
     }
@@ -54,7 +57,9 @@ export const registerUser = async (req: Request, res: Response) => {
 
 export const loginUser = async (req: Request, res: Response) => {
     try {
+      console.log('Login endpoint called');
       const { email, password } = req.body;
+      console.log('Received data:', { email, hasPassword: !!password });
   
       if (!email || !password) {
         return res.status(400).json({ error: 'Email and password are required' });
@@ -70,17 +75,29 @@ export const loginUser = async (req: Request, res: Response) => {
       });
 
       if (!user) {
+        console.log('User not found for email:', email);
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
+      console.log('User found, comparing password...');
       const isMatch = await bcrypt.compare(password, user.password);
   
       if (!isMatch) {
+        console.log('Password mismatch');
         return res.status(401).json({ error: 'Invalid credentials' });
       }
-      const token=generateToken(user.id);
-      return res.status(200).json({token});
-    } catch (err) {
-      return res.status(500).json({ error: 'Internal server error' });
+
+      console.log('Password match, generating token...');
+      const token = generateToken(user.id);
+      console.log('Token generated successfully');
+      return res.status(200).json({ token });
+    } catch (err: any) {
+      console.error('Login error:', err);
+      console.error('Error stack:', err.stack);
+      return res.status(500).json({ 
+        error: 'Internal server error',
+        message: err.message || 'Unknown error',
+        code: err.code || undefined
+      });
     }
   };
