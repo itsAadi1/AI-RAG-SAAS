@@ -41,6 +41,7 @@ export default function App() {
   const [workspaceLoading, setWorkspaceLoading] = useState(false);
   const [showCreateWorkspace, setShowCreateWorkspace] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState("");
+  const [showApp, setShowApp] = useState(false);
 
   // Get messages for current workspace
   const messages = selectedWorkspaceId ? (messagesByWorkspace.get(selectedWorkspaceId) || []) : [];
@@ -50,8 +51,19 @@ export default function App() {
   const uploadAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Check authentication on mount
-  useEffect(() => {
+  const isAppViewFromUrl = () => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("view") === "app";
+  };
+
+  const openAppView = () => {
+    const params = new URLSearchParams(window.location.search);
+    params.set("view", "app");
+    const newUrl = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
+    window.history.pushState({}, "", newUrl);
+
+    setShowApp(true);
+
     const token = getToken();
     if (token) {
       setIsAuthenticated(true);
@@ -59,6 +71,38 @@ export default function App() {
     } else {
       setShowAuthModal(true);
     }
+  };
+
+  // Initialize view and auth from URL + token, and react to back/forward
+  useEffect(() => {
+    const initialIsApp = isAppViewFromUrl();
+    setShowApp(initialIsApp);
+
+    const token = getToken();
+    if (token && initialIsApp) {
+      setIsAuthenticated(true);
+      loadWorkspaces();
+    } else if (initialIsApp) {
+      setShowAuthModal(true);
+    }
+
+    const handlePopState = () => {
+      const nowIsApp = isAppViewFromUrl();
+      setShowApp(nowIsApp);
+
+      if (nowIsApp) {
+        const token = getToken();
+        if (token) {
+          setIsAuthenticated(true);
+          loadWorkspaces();
+        } else {
+          setShowAuthModal(true);
+        }
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
   const loadWorkspaces = async () => {
@@ -276,7 +320,151 @@ export default function App() {
     scrollToBottom();
   }, [messages, loading, selectedWorkspaceId]);
 
-  // Auth Modal
+  // Public landing page (shown before entering the app)
+  if (!showApp) {
+    return (
+      <div className="landing">
+        <header className="landing-header">
+          <div className="landing-logo">
+            <span className="landing-logo-mark">DR</span>
+            <span className="landing-logo-text">Document RAG</span>
+          </div>
+          <nav className="landing-nav">
+            <a href="#features">Features</a>
+            <a href="#how-it-works">How it works</a>
+            <a href="#privacy">Privacy</a>
+          </nav>
+          <button
+            className="landing-cta-button"
+            onClick={openAppView}
+          >
+            Get started
+          </button>
+        </header>
+
+        <main className="landing-main">
+          <section className="landing-hero">
+            <div className="landing-hero-text">
+              <h1>Chat with your documents, not the whole internet.</h1>
+              <p>
+                Upload PDFs and ask questions like you would in ChatGPT&mdash;
+                but tuned to your own workspace knowledge.
+              </p>
+              <div className="landing-hero-actions">
+                <button
+                  className="landing-cta-button primary"
+                  onClick={openAppView}
+                >
+                  Start now
+                </button>
+              </div>
+              <p className="landing-hero-note">
+                Refreshing the page will clear chats, but your documents stay preserved.
+              </p>
+            </div>
+
+            <div className="landing-hero-panel">
+              <div className="landing-hero-card">
+                <div className="landing-hero-card-header">
+                  <span className="pill pill-user">You</span>
+                  <span className="pill pill-doc">Workspace • 3 docs</span>
+                </div>
+                <div className="landing-hero-card-body">
+                  <div className="bubble user">
+                    Summarize the key points from my PDF in 3 bullets.
+                  </div>
+                  <div className="bubble ai">
+                    <span className="bubble-title">From: onboarding.pdf</span>
+                    <ul>
+                      <li>High-level summary pulled directly from your document.</li>
+                      <li>Grounded answers with inline references.</li>
+                      <li>Fast follow-up Q&amp;A across all uploaded files.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="features" className="landing-section">
+            <h2>Why teams use Document RAG</h2>
+            <div className="landing-grid">
+              <div className="landing-card">
+                <h3>Upload once, chat anytime</h3>
+                <p>
+                  Drop in PDFs, docs, or text and turn them into a searchable,
+                  conversational knowledge base in seconds.
+                </p>
+              </div>
+              <div className="landing-card">
+                <h3>Grounded, focused answers</h3>
+                <p>
+                  Responses stay anchored to your content instead of the open web,
+                  so you can trust where each answer comes from.
+                </p>
+              </div>
+              <div className="landing-card">
+                <h3>Workspace-friendly</h3>
+                <p>
+                  Organize documents into workspaces for projects, clients, or teams
+                  and switch between them with a single click.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section id="how-it-works" className="landing-section">
+            <h2>How it works</h2>
+            <ol className="landing-steps">
+              <li>
+                <span className="step-number">1</span>
+                <div>
+                  <h3>Create a workspace</h3>
+                  <p>
+                    Group related documents together so each conversation stays focused
+                    on the right context.
+                  </p>
+                </div>
+              </li>
+              <li>
+                <span className="step-number">2</span>
+                <div>
+                  <h3>Upload your documents</h3>
+                  <p>
+                    We index your files so you can search and chat across them with natural language.
+                  </p>
+                </div>
+              </li>
+              <li>
+                <span className="step-number">3</span>
+                <div>
+                  <h3>Ask questions like ChatGPT</h3>
+                  <p>
+                    Get summaries, explanations, and structured answers grounded in your own content.
+                  </p>
+                </div>
+              </li>
+            </ol>
+          </section>
+
+          <section id="privacy" className="landing-section landing-section-muted">
+            <h2>Privacy & storage</h2>
+            <p>
+              We don&apos;t store your long-term chat history. Refreshing the page clears
+              the current conversation, but your uploaded documents stay safely preserved
+              in your workspace.
+            </p>
+          </section>
+        </main>
+
+        <footer className="landing-footer">
+          <p>© {new Date().getFullYear()} Document RAG. Built with AI assistance.</p>
+        </footer>
+      </div>
+    );
+  }
+
+  // Auth Modal (shown when entering the app)
   if (showAuthModal || !isAuthenticated) {
     return (
       <div className="auth-modal-overlay">
@@ -624,7 +812,7 @@ export default function App() {
             </button>
           </div>
           <div className="input-footer">
-            <p>Document RAG can make mistakes. Check important info.</p>
+            <p>Refreshing the page will clear this chat, but your documents are still preserved.</p>
           </div>
         </div>
       </main>
