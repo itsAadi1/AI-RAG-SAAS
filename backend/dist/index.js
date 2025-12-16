@@ -19,8 +19,26 @@ app.use('/documents', documents_routes_1.default);
 app.use("/rag", rag_routes_1.default);
 app.use('/workspaces', workspace_routes_1.default);
 app.use('/auth', auth_routes_1.default);
+// Test endpoint
+app.get('/', (req, res) => {
+    res.json({ message: 'Server is running', routes: ['/auth/register', '/auth/login'] });
+});
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Error:', err);
+    res.status(err.status || 500).json({
+        error: err.message || 'Internal server error'
+    });
+});
+// 404 handler
+app.use((req, res) => {
+    res.status(404).json({ error: `Route not found: ${req.method} ${req.path}` });
+});
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+    console.log('Available routes:');
+    console.log('  POST /auth/register');
+    console.log('  POST /auth/login');
 });
 //# sourceMappingURL=index.js.map

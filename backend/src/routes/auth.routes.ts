@@ -1,7 +1,14 @@
 import { Router } from "express";
-const router=Router();
 import { loginUser, registerUser } from "../controllers/auth.controller";
-router.post('/register',registerUser);
-router.post('/login',loginUser);
+
+const router = Router();
+
+// Test route to verify router is working
+router.get('/test', (req, res) => {
+  res.json({ message: 'Auth router is working' });
+});
+
+router.post('/register', registerUser);
+router.post('/login', loginUser);
 
 export default router;

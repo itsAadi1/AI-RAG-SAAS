@@ -17,7 +17,9 @@ const generateToken=(userId:string)=>{
 }
 export const registerUser = async (req: Request, res: Response) => {
   try {
+    console.log('Register endpoint called');
     const { email, password } = req.body;
+    console.log('Received data:', { email, hasPassword: !!password });
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
@@ -31,16 +33,22 @@ export const registerUser = async (req: Request, res: Response) => {
       return res.status(409).json({ error: 'User already exists' });
     }
 
-    await prisma.user.create({
+    const hashedPassword = await hashPassword(password);
+    const user = await prisma.user.create({
       data: {
         email,
-        password: await hashPassword(password)
+        password: hashedPassword
       }
     });
 
+    console.log('User created successfully:', user.id);
     return res.status(201).json({ message: 'User created' });
-  } catch (err) {
-    return res.status(500).json({ error: 'Internal server error' });
+  } catch (err: any) {
+    console.error('Registration error:', err);
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 
