@@ -496,6 +496,16 @@ export default function App() {
               {authLoading ? "Loading..." : authMode === "login" ? "Login" : "Register"}
             </button>
           </form>
+          <div className="auth-info">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+            <p>
+              <strong>Note:</strong> The backend service may take up to 50 seconds to wake up if it's been idle. Please wait patiently.
+            </p>
+          </div>
           <div className="auth-switch">
             {authMode === "login" ? (
               <>
