@@ -23,17 +23,22 @@ model Workspace {
   createdAt DateTime   @default(now())
   documents Document[]
   owner     User       @relation(fields: [ownerId], references: [id])
+
+  @@index([ownerId])
 }
 
 model Document {
-  id          String    @id @default(uuid())
+  id          String         @id @default(uuid())
   workspaceId String
   title       String
   fileUrl     String
   textContent String?
-  createdAt   DateTime  @default(now())
+  status      DocumentStatus @default(PROCESSING)
+  createdAt   DateTime       @default(now())
   chunks      Chunk[]
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  workspace   Workspace      @relation(fields: [workspaceId], references: [id])
+
+  @@index([workspaceId])
 }
 
 model Chunk {
@@ -44,4 +49,12 @@ model Chunk {
   position   Int
   createdAt  DateTime @default(now())
   document   Document @relation(fields: [documentId], references: [id])
+
+  @@index([documentId])
+}
+
+enum DocumentStatus {
+  PROCESSING
+  READY
+  FAILED
 }
