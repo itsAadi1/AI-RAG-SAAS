@@ -182,11 +182,11 @@ User question:
 
 export async function answerWithRAG(question: string, workspaceId: string) {
   // 1. Embed the question (4096 dims)
-  // const queryEmbedding = await embedSingleText(question);
-  const rewrittenQuery = await rewriteQuery(question);
-console.log("Rewritten query:", rewrittenQuery);
+  const queryEmbedding = await embedSingleText(question);
+  // const rewrittenQuery = await rewriteQuery(question);
+// console.log("Rewritten query:", rewrittenQuery);
 
-const queryEmbedding = await embedSingleText(rewrittenQuery);
+// const queryEmbedding = await embedSingleText(rewrittenQuery);
 
   console.log("Question embedding size:", queryEmbedding.length); // Should be 384
 
@@ -240,16 +240,16 @@ const queryEmbedding = await embedSingleText(rewrittenQuery);
   diverseMatches.sort((a, b) => (b.score || 0) - (a.score || 0));
 
   // Take top 10-15 chunks from diverse documents
-  // const selectedMatches = diverseMatches.slice(0, 15);
+  const selectedMatches = diverseMatches.slice(0, 15);
   // Take initial candidates
-const initialCandidates = diverseMatches.slice(0, 15);
+// const initialCandidates = diverseMatches.slice(0, 15);
 
 // 🔥 Re-rank using LLM
-const selectedMatches = await rerankChunks(
-  question,
-  initialCandidates,
-  7 // final context size
-);
+// const selectedMatches = await rerankChunks(
+//   question,
+//   initialCandidates,
+//   7 // final context size
+// );
 
 
   const context = selectedMatches.map((m) => m.metadata?.text).join("\n\n");
@@ -270,6 +270,7 @@ Answer:
   // 5. Call Groq Llama3 (fast + FREE)
   const completion = await groq.chat.completions.create({
     model: "llama-3.3-70b-versatile", // Recommended model
+    temperature: 1,
     messages: [
       { role: "system", content: "You are a helpful AI assistant." },
       { role: "user", content: prompt },
