@@ -6,15 +6,16 @@ import { pineconeIndex } from "../utils/pineconeClient";
 import prisma from "../prisma/prisma";
 import { chunkText } from "../utils/chunkText";
 
+  import { GoogleGenAI } from "@google/genai";
 export async function processDocumentForRAG(documentId: string, text: string) {
   try {
-    // 1️⃣ Mark document as PROCESSING
+    // Mark document as PROCESSING
     await prisma.document.update({
       where: { id: documentId },
       data: { status: "PROCESSING" }
     });
 
-    // 2️⃣ Fetch workspaceId (needed for Pinecone metadata)
+    // Fetch workspaceId (needed for Pinecone metadata)
     const document = await prisma.document.findUnique({
       where: { id: documentId },
       select: { workspaceId: true }
@@ -24,21 +25,21 @@ export async function processDocumentForRAG(documentId: string, text: string) {
       throw new Error("Document not found");
     }
 
-    // 3️⃣ Chunk text
+    // Chunk text
     const chunks = chunkText(text);
 
     if (!chunks.length) {
       throw new Error("No text chunks generated");
     }
 
-    // 4️⃣ Generate embeddings (already batched internally)
+    // Generate embeddings (already batched internally)
     const embeddings = await embedText(chunks);
 
     if (embeddings.length !== chunks.length) {
       throw new Error("Embedding count mismatch");
     }
 
-    // 5️⃣ Prepare chunk records for DB
+    // Prepare chunk records for DB
     const chunkRecords = chunks.map((chunk, index) => ({
       documentId: documentId,
       text: chunk,
@@ -46,12 +47,12 @@ export async function processDocumentForRAG(documentId: string, text: string) {
       position: index
     }));
 
-    // 6️⃣ Insert all chunks at once
+    // Insert all chunks at once
     await prisma.chunk.createMany({
       data: chunkRecords
     });
 
-    // 7️⃣ Fetch saved chunks (to get IDs for Pinecone)
+    // Fetch saved chunks (to get IDs for Pinecone)
     const savedChunks = await prisma.chunk.findMany({
       where: { documentId: documentId },
       select: {
@@ -65,7 +66,7 @@ export async function processDocumentForRAG(documentId: string, text: string) {
       throw new Error("Chunks not persisted");
     }
 
-    // 8️⃣ Prepare Pinecone vectors
+    // Prepare Pinecone vectors
     const pineconeVectors = savedChunks.map(chunk => ({
       id: chunk.id,
       values: chunk.vector,
@@ -76,10 +77,10 @@ export async function processDocumentForRAG(documentId: string, text: string) {
       }
     }));
 
-    // 9️⃣ Single batch upsert to Pinecone
+    // Single batch upsert to Pinecone
     await pineconeIndex.upsert(pineconeVectors);
 
-    // 🔟 Mark document as READY
+    // Mark document as READY
     await prisma.document.update({
       where: { id: documentId },
       data: { status: "READY" }
@@ -93,7 +94,7 @@ export async function processDocumentForRAG(documentId: string, text: string) {
   } catch (error: any) {
     console.error("RAG processing failed:", error);
 
-    // ❌ Mark document as FAILED
+    // Mark document as FAILED
     await prisma.document.update({
       where: { id: documentId },
       data: { status: "FAILED" }
@@ -107,78 +108,6 @@ export async function processDocumentForRAG(documentId: string, text: string) {
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY!,
 });
-async function rerankChunks(
-  question: string,
-  matches: Array<any>,
-  topN: number = 7
-) {
-  const chunkList = matches.map((m, idx) => ({
-    id: m.id,
-    text: m.metadata?.text,
-    index: idx,
-  }));
-
-  const prompt = `
-You are ranking document chunks for question answering.
-
-Question:
-"${question}"
- 
-Below are document chunks. 
-Return the ${topN} most relevant chunk IDs in JSON array format.
-ONLY return JSON. No explanation.
-
-Chunks:
-${chunkList
-  .map(
-    (c) => `
-ID: ${c.id}
-Text: ${c.text}
-`
-  )
-  .join("\n")}
-`;
-
-  const completion = await groq.chat.completions.create({
-    model: "llama-3.3-70b-versatile",
-    temperature: 0,
-    messages: [
-      { role: "system", content: "You are a ranking engine." },
-      { role: "user", content: prompt },
-    ],
-  });
-
-  let rankedIds: string[];
-
-  try {
-    rankedIds = JSON.parse(completion.choices[0].message.content || "[]");
-  } catch {
-    return matches.slice(0, topN); // fallback
-  }
-
-  return matches.filter((m) => rankedIds.includes(m.id));
-}
-async function rewriteQuery(question: string): Promise<string> {
-  const prompt = `
-Rewrite the following user question into a precise and explicit search query.
-Do NOT answer the question.
-Return only the rewritten query.
-
-User question:
-"${question}"
-`;
-
-  const completion = await groq.chat.completions.create({
-    model: "llama-3.3-70b-versatile",
-    temperature: 0,
-    messages: [
-      { role: "system", content: "You rewrite questions for document retrieval." },
-      { role: "user", content: prompt }
-    ]
-  });
- console.log(completion.choices[0].message);
-  return completion.choices[0].message.content?.trim() || question;
-}
 
 export async function answerWithRAG(question: string, workspaceId: string) {
   // 1. Embed the question (4096 dims)
@@ -244,7 +173,7 @@ export async function answerWithRAG(question: string, workspaceId: string) {
   // Take initial candidates
 // const initialCandidates = diverseMatches.slice(0, 15);
 
-// 🔥 Re-rank using LLM
+// Re-rank using LLM
 // const selectedMatches = await rerankChunks(
 //   question,
 //   initialCandidates,
@@ -268,16 +197,31 @@ Answer:
 `;
 
   // 5. Call Groq Llama3 (fast + FREE)
-  const completion = await groq.chat.completions.create({
-    model: "llama-3.3-70b-versatile", // Recommended model
-    temperature: 1,
-    messages: [
-      { role: "system", content: "You are a helpful AI assistant." },
-      { role: "user", content: prompt },
-    ],
-  });
+  // const completion = await groq.chat.completions.create({
+  //   model: "llama-3.3-70b-versatile", // Recommended model
+  //   temperature: 1,
+  //   messages: [
+  //     { role: "system", content: "You are a helpful AI assistant." },
+  //     { role: "user", content: prompt },
+  //   ],
+  // });
 
-  const answer = completion.choices[0].message.content;
+const ai = new GoogleGenAI({});
+  
+  const completion = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: [
+      `${prompt}`
+    ],
+    config: {
+      systemInstruction: "You are a helpful AI assistant.",
+
+    }
+  });
+  
+
+  
+  const answer =completion.text;
 
   return {
     answer,

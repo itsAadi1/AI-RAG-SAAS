@@ -1,22 +1,55 @@
-export function chunkText(text: string, chunkSize = 300) {
-    const words = text.split(' ');
-    const chunks: string[] = [];
-    let currentChunk: string[] = [];
-  
-    for (const word of words) {
-      currentChunk.push(word);
-  
-      const currentLength = currentChunk.join(' ').length;
-      if (currentLength >= chunkSize) {
-        chunks.push(currentChunk.join(' '));
-        currentChunk = [];
+function estimateTokens(text: string): number {
+  // 4 chars per token
+  return Math.ceil(text.length / 4);
+}
+
+export function chunkText(
+  text: string,
+  maxTokens: number = 500
+): string[] {
+  // Normalize text
+  const cleaned = text
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{2,}/g, "\n\n")
+    .trim();
+
+  // Split by paragraphs (semantic boundary)
+  const paragraphs = cleaned
+    .split("\n\n")
+    .map(p => p.trim())
+    .filter(Boolean);
+
+  const chunks: string[] = [];
+  let currentChunk = "";
+  let currentTokens = 0;
+
+  for (const paragraph of paragraphs) {
+    const paragraphTokens = estimateTokens(paragraph);
+
+    // Paragraph itself too large → force split
+    if (paragraphTokens > maxTokens) {
+      if (currentChunk) {
+        chunks.push(currentChunk.trim());
+        currentChunk = "";
+        currentTokens = 0;
       }
+      chunks.push(paragraph);
+      continue;
     }
-  
-    if (currentChunk.length > 0) {
-      chunks.push(currentChunk.join(' '));
+
+    if (currentTokens + paragraphTokens <= maxTokens) {
+      currentChunk += paragraph + "\n\n";
+      currentTokens += paragraphTokens;
+    } else {
+      chunks.push(currentChunk.trim());
+      currentChunk = paragraph + "\n\n";
+      currentTokens = paragraphTokens;
     }
-  
-    return chunks;
   }
-  
+
+  if (currentChunk.trim()) {
+    chunks.push(currentChunk.trim());
+  }
+
+  return chunks;
+}

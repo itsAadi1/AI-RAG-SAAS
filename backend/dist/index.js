@@ -24,10 +24,12 @@ const documents_routes_1 = __importDefault(require("./routes/documents.routes"))
 const rag_routes_1 = __importDefault(require("./routes/rag.routes"));
 const workspace_routes_1 = __importDefault(require("./routes/workspace.routes"));
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
+const health_routes_1 = __importDefault(require("./routes/health.routes"));
 app.use('/documents', documents_routes_1.default);
 app.use("/rag", rag_routes_1.default);
 app.use('/workspaces', workspace_routes_1.default);
 app.use('/auth', auth_routes_1.default);
+app.use('/health', health_routes_1.default);
 // Test endpoint
 app.get('/', (req, res) => {
     res.json({ message: 'Server is running', routes: ['/auth/register', '/auth/login'] });

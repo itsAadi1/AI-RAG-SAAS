@@ -23,12 +23,12 @@ import documentRoutes from './routes/documents.routes';
 import ragRoutes from "./routes/rag.routes";
 import workspaceRoutes from './routes/workspace.routes';
 import authRoutes from './routes/auth.routes';
-
+import healthRoutes from "./routes/health.routes"
 app.use('/documents', documentRoutes);
 app.use("/rag", ragRoutes);
 app.use('/workspaces', workspaceRoutes);
 app.use('/auth', authRoutes);
-
+app.use('/health',healthRoutes)
 // Test endpoint
 app.get('/', (req, res) => {
   res.json({ message: 'Server is running', routes: ['/auth/register', '/auth/login'] });
